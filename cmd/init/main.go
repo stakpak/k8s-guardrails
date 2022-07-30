@@ -118,8 +118,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// createMutationConfig(serverCertPEM)
 }
 
 // WriteFile writes data in the file at the given path

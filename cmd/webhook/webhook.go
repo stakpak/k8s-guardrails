@@ -110,5 +110,3 @@ func serve(w http.ResponseWriter, r *http.Request, admit admitHandler) {
 		klog.Error(err)
 	}
 }
-
-

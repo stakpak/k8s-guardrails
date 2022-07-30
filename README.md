@@ -13,5 +13,5 @@ K8s Guardrails POC allowes you to restrict specific user identities (e.g. servic
 4) service accounts in scope are not allowed to add or modify the owner label
 
 ## Caveats
-+ without using authn & authz webhooks it is not possible for admission webhooks to restrict access of read actions
++ without using authn/authz webhooks it is not possible for admission webhooks to restrict access of read actions, and authn/authz webhook require changes to api-server flags which is not possible on many manage Kubernetes services
 + restricted service accounts can create other service accounts and assuming them to bypass the guardrails

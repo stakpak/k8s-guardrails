@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: guku
+  name: guardrails-webhook
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: guku-guardrails-webhook
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations"]
+  # resourceNames: ["guardrails.guku.io"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: guku-guardrails-webhook
+subjects:
+- kind: ServiceAccount
+  name: guardrails-webhook
+  namespace: guku
+roleRef:
+  kind: ClusterRole
+  name: guku-guardrails-webhook
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: guku
+  name: guardrails-webhook
+  labels:
+    app: guardrails-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guardrails-webhook
+  template:
+    metadata:
+      labels:
+        app: guardrails-webhook
+    spec:
+      serviceAccountName: guardrails-webhook
+      initContainers:
+      - name: init
+        image: guardrails-init:0.1.1
+        volumeMounts:
+          - mountPath: /etc/webhook/certs
+            name: webhook-certs
+      containers:
+      - name: webhook
+        image: guardrails-webhook:0.1.1
+        args:
+          - -v
+          - "2"
+          - --owner
+          - "system:serviceaccount:guku:guku"
+        env:
+          - name: MUTATE_CONFIG
+            value: guardrails.guku.io
+          - name: WEBHOOK_NAMESPACE
+            value:  guku
+          - name: WEBHOOK_SERVICE
+            value: guardrails-webhook
+          - name: WEBHOOK_PATH
+            value:  /mutate
+          - name: WEBHOOK_PORT
+            value:  "443"
+        ports:
+        - containerPort: 8443
+        resources:
+          requests:
+            cpu: 50m
+            memory: 10Mi
+          limits:
+            cpu: 1000m
+            memory: 500Mi
+        volumeMounts:
+          - mountPath: /etc/webhook/certs
+            name: webhook-certs
+            readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /readyz
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8443
+            scheme: HTTPS
+      volumes:
+        - name: webhook-certs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: guku
+  name: guardrails-webhook
+spec:
+  selector:
+    app: guardrails-webhook
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8443

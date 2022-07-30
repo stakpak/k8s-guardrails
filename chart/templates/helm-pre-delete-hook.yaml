@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k8s-guardrails-hook-pre-delete
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    spec:
+      serviceAccount: guardrails-webhook
+      containers:
+        - name: kubectl
+          image: bitnami/kubectl:latest
+          command:
+            - sh
+            - '-c'
+            - >-
+              kubectl delete mutatingwebhookconfiguration guardrails.guku.io;
+      restartPolicy: Never
+  backoffLimit: 2
